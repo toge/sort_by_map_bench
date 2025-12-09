@@ -21,6 +21,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(absl REQUIRED CONFIG)
 find_package(faker-cxx REQUIRED CONFIG)
+find_package(celero REQUIRED CONFIG)
 
 add_executable(sort_by_map_bench sort_by_map_bench.cpp)
 target_link_libraries(sort_by_map_bench PRIVATE
@@ -29,3 +30,12 @@ target_link_libraries(sort_by_map_bench PRIVATE
 )
 # requires C++23 for flat_map
 target_compile_features(sort_by_map_bench PRIVATE cxx_std_23)
+
+add_executable(sort_by_map_bench2 sort_by_map_bench2.cpp)
+target_link_libraries(sort_by_map_bench2 PRIVATE
+    absl::container_common
+    faker-cxx::faker-cxx
+    celero
+)
+# requires C++23 for flat_map
+target_compile_features(sort_by_map_bench2 PRIVATE cxx_std_23)

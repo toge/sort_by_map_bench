@@ -1,6 +1,7 @@
 {
   "dependencies": [
     "abseil",
-    "faker-cxx"
+    "faker-cxx",
+    "celero"
   ]
 }

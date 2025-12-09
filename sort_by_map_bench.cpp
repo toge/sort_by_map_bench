@@ -5,7 +5,7 @@
 #include "absl/container/btree_map.h"
 #include "faker-cxx/faker.h"
 
-void loop_int_int_baseline(int count) {
+void loop_number_number_baseline(int count) {
   auto&& rand = []() noexcept {
     auto device = std::random_device{};
     auto engine = std::mt19937{device()};
@@ -28,7 +28,7 @@ void loop_int_int_baseline(int count) {
 }
 
 template<typename T>
-void loop_int_int(int count) {
+void loop_number_number(int count) {
   auto&& rand = []() noexcept {
     auto device = std::random_device{};
     auto engine = std::mt19937{device()};
@@ -45,8 +45,7 @@ void loop_int_int(int count) {
     map.emplace(key, value);
   }
 
-  for (const auto& [key, value] : map) {
-    (void)key;
+  for (const auto& [_, value] : map) {
     (void)value;
   }
 
@@ -55,7 +54,7 @@ void loop_int_int(int count) {
   std::cout << "Type: " << typeid(T).name() << ", Count: " << count << ", Duration: " << duration << " ms" << std::endl;
 }
 
-void loop_int_string_baseline(int count) {
+void loop_number_string_baseline(int count) {
   auto&& rand = []() noexcept {
     auto device = std::random_device{};
     auto engine = std::mt19937{device()};
@@ -78,7 +77,7 @@ void loop_int_string_baseline(int count) {
 }
 
 template<typename T>
-void loop_int_string(int count) {
+void loop_number_string(int count) {
   auto&& rand = []() noexcept {
     auto device = std::random_device{};
     auto engine = std::mt19937{device()};
@@ -95,8 +94,7 @@ void loop_int_string(int count) {
     map.emplace(key, value);
   }
 
-  for (const auto& [key, value] : map) {
-    (void)key;
+  for (const auto& [_, value] : map) {
     (void)value;
   }
 
@@ -105,7 +103,7 @@ void loop_int_string(int count) {
   std::cout << "Type: " << typeid(T).name() << ", Count: " << count << ", Duration: " << duration << " ms" << std::endl;
 }
 
-void loop_string_int_baseline(int count) {
+void loop_string_number_baseline(int count) {
   auto&& rand = []() noexcept {
     auto device = std::random_device{};
     auto engine = std::mt19937{device()};
@@ -128,7 +126,7 @@ void loop_string_int_baseline(int count) {
 }
 
 template<typename T>
-void loop_string_int(int count) {
+void loop_string_number(int count) {
   auto&& rand = []() noexcept {
     auto device = std::random_device{};
     auto engine = std::mt19937{device()};
@@ -144,8 +142,7 @@ void loop_string_int(int count) {
     map.emplace(key, value);
   }
 
-  for (const auto& [key, value] : map) {
-    (void)key;
+  for (const auto& [_, value] : map) {
     (void)value;
   }
 
@@ -180,8 +177,7 @@ void loop_string_string(int count) {
     map.emplace(key, value);
   }
 
-  for (const auto& [key, value] : map) {
-    (void)key;
+  for (const auto& [_, value] : map) {
     (void)value;
   }
 
@@ -194,64 +190,64 @@ int main() {
   auto const count_list = std::array{10, 50, 100, 1000, 10000, 100000, 1000000};
 
   for (auto const count : count_list) {
-    loop_int_int_baseline(count);
-    loop_int_int<std::map<int, int>>(count);
-    loop_int_int<std::flat_map<int, int>>(count);
-    loop_int_int<absl::btree_map<int, int>>(count);
+    loop_number_number_baseline(count);
+    loop_number_number<std::map<int, int>>(count);
+    loop_number_number<std::flat_map<int, int>>(count);
+    loop_number_number<absl::btree_map<int, int>>(count);
   }
   std::cout << '\n';
   std::cout << '\n';
 
   for (auto const count : count_list) {
-    loop_int_int_baseline(count);
-    loop_int_int<std::map<int, double>>(count);
-    loop_int_int<std::flat_map<int, double>>(count);
-    loop_int_int<absl::btree_map<int, double>>(count);
+    loop_number_number_baseline(count);
+    loop_number_number<std::map<int, double>>(count);
+    loop_number_number<std::flat_map<int, double>>(count);
+    loop_number_number<absl::btree_map<int, double>>(count);
   }
   std::cout << '\n';
   std::cout << '\n';
 
   for (auto const count : count_list) {
-    loop_int_int_baseline(count);
-    loop_int_int<std::map<double, int>>(count);
-    loop_int_int<std::flat_map<double, int>>(count);
-    loop_int_int<absl::btree_map<double, int>>(count);
+    loop_number_number_baseline(count);
+    loop_number_number<std::map<double, int>>(count);
+    loop_number_number<std::flat_map<double, int>>(count);
+    loop_number_number<absl::btree_map<double, int>>(count);
   }
   std::cout << '\n';
   std::cout << '\n';
 
   for (auto const count : count_list) {
-    loop_int_int_baseline(count);
-    loop_int_int<std::map<double, double>>(count);
-    loop_int_int<std::flat_map<double, double>>(count);
-    loop_int_int<absl::btree_map<double, double>>(count);
+    loop_number_number_baseline(count);
+    loop_number_number<std::map<double, double>>(count);
+    loop_number_number<std::flat_map<double, double>>(count);
+    loop_number_number<absl::btree_map<double, double>>(count);
   }
   std::cout << '\n';
   std::cout << '\n';
 
   for (auto const count : count_list) {
-    loop_int_string_baseline(count);
-    loop_int_string<std::map<int, std::string>>(count);
-    loop_int_string<std::flat_map<int, std::string>>(count);
-    loop_int_string<absl::btree_map<int, std::string>>(count);
+    loop_number_string_baseline(count);
+    loop_number_string<std::map<int, std::string>>(count);
+    loop_number_string<std::flat_map<int, std::string>>(count);
+    loop_number_string<absl::btree_map<int, std::string>>(count);
   }
   std::cout << '\n';
   std::cout << '\n';
 
   for (auto const count : count_list) {
-    loop_int_string_baseline(count);
-    loop_int_string<std::map<double, std::string>>(count);
-    loop_int_string<std::flat_map<double, std::string>>(count);
-    loop_int_string<absl::btree_map<double, std::string>>(count);
+    loop_number_string_baseline(count);
+    loop_number_string<std::map<double, std::string>>(count);
+    loop_number_string<std::flat_map<double, std::string>>(count);
+    loop_number_string<absl::btree_map<double, std::string>>(count);
   }
   std::cout << '\n';
   std::cout << '\n';
 
   for (auto const count : count_list) {
-    loop_string_int_baseline(count);
-    loop_string_int<std::map<std::string, int>>(count);
-    loop_string_int<std::flat_map<std::string, int>>(count);
-    loop_string_int<absl::btree_map<std::string, int>>(count);
+    loop_string_number_baseline(count);
+    loop_string_number<std::map<std::string, int>>(count);
+    loop_string_number<std::flat_map<std::string, int>>(count);
+    loop_string_number<absl::btree_map<std::string, int>>(count);
   }
   std::cout << '\n';
   std::cout << '\n';
