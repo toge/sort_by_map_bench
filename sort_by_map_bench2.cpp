@@ -187,7 +187,7 @@ void loop_string_number_baseline(int count) {
   }();
 
   for (int i = 0; i < count; ++i) {
-    auto const key = faker::color::name(faker::Locale::ja_JP);
+    auto const key = std::string{faker::color::name(faker::Locale::ja_JP)} + "#" + std::to_string(i);
     auto const value = rand();
     celero::DoNotOptimizeAway(key.size());
     celero::DoNotOptimizeAway(value);
@@ -216,7 +216,7 @@ void loop_string_number(int count) {
     map.replace(std::move(keys), std::move(values));
   }
   for (int i = 0; i < count; ++i) {
-    auto const key = faker::color::name(faker::Locale::ja_JP);
+    auto const key = std::string{faker::color::name(faker::Locale::ja_JP)} + "#" + std::to_string(i);
     auto const value = rand();
     map.emplace(key, value);
   }
@@ -239,7 +239,7 @@ void loop_string_number_array(int count) {
   std::vector<U> values(count);
 
   for (int i = 0; i < count; ++i) {
-    keys.emplace_back(faker::color::name(faker::Locale::ja_JP));
+    keys.emplace_back(std::string{faker::color::name(faker::Locale::ja_JP)} + "#" + std::to_string(i));
     values[i] = rand();
   }
 
@@ -256,7 +256,7 @@ void loop_string_number_array(int count) {
 
 void loop_string_string_baseline(int count) {
   for (int i = 0; i < count; ++i) {
-    auto const key = faker::color::name(faker::Locale::ja_JP);
+    auto const key = std::string{faker::color::name(faker::Locale::ja_JP)} + "#" + std::to_string(i);
     auto const value = faker::company::catchPhrase(faker::Locale::ja_JP);
     celero::DoNotOptimizeAway(key);
     celero::DoNotOptimizeAway(value);
@@ -278,7 +278,7 @@ void loop_string_string(int count) {
     map.replace(std::move(keys), std::move(values));
   }
   for (int i = 0; i < count; ++i) {
-    auto const key = faker::color::name(faker::Locale::ja_JP);
+    auto const key = std::string{faker::color::name(faker::Locale::ja_JP)} + "#" + std::to_string(i);
     auto const value = faker::company::catchPhrase(faker::Locale::ja_JP);
     map.emplace(key, value);
   }
@@ -296,7 +296,7 @@ void loop_string_string_array(int count) {
   values.reserve(count);
 
   for (int i = 0; i < count; ++i) {
-    keys.emplace_back(faker::color::name(faker::Locale::ja_JP));
+    keys.emplace_back(std::string{faker::color::name(faker::Locale::ja_JP)} + "#" + std::to_string(i));
     values.emplace_back(faker::company::catchPhrase(faker::Locale::ja_JP));
   }
 
@@ -335,19 +335,19 @@ BENCHMARK(INT_INT_10, 04_ARRAY, 100, 1000) {
   loop_number_number_array<int, int>(10);
 }
 
-BASELINE(INT_INT_100, Baseline, 10, 1000) {
+BASELINE(INT_INT_100, Baseline, 100, 1000) {
   loop_number_number_baseline(100);
 }
 
-BENCHMARK(INT_INT_100, 01_STD_MAP, 10, 1000) {
+BENCHMARK(INT_INT_100, 01_STD_MAP, 100, 1000) {
   loop_number_number<std::map<int, int>>(100);
 }
 
-BENCHMARK(INT_INT_100, 02_STD_FLAT_MAP, 10, 1000) {
+BENCHMARK(INT_INT_100, 02_STD_FLAT_MAP, 100, 1000) {
   loop_number_number<std::flat_map<int, int>>(100);
 }
 
-BENCHMARK(INT_INT_100, 03_ABSEIL_BTREE, 10, 1000) {
+BENCHMARK(INT_INT_100, 03_ABSEIL_BTREE, 100, 1000) {
   loop_number_number<absl::btree_map<int, int>>(100);
 }
 
@@ -371,7 +371,7 @@ BENCHMARK(INT_INT_1000, 03_ABSEIL_BTREE, 10, 1000) {
   loop_number_number<absl::btree_map<int, int>>(1000);
 }
 
-BENCHMARK(INT_INT_1000, 04_ARRAY, 100, 1000) {
+BENCHMARK(INT_INT_1000, 04_ARRAY, 10, 1000) {
   loop_number_number_array<int, int>(1000);
 }
 
@@ -391,7 +391,7 @@ BENCHMARK(INT_INT_10000, 03_ABSEIL_BTREE, 10, 100) {
   loop_number_number<absl::btree_map<int, int>>(10000);
 }
 
-BENCHMARK(INT_INT_10000, 04_ARRAY, 100, 100) {
+BENCHMARK(INT_INT_10000, 04_ARRAY, 10, 100) {
   loop_number_number_array<int, int>(10000);
 }
 
@@ -433,7 +433,7 @@ BENCHMARK(INT_STRING_100, 03_ABSEIL_BTREE, 10, 1000) {
   loop_number_string<absl::btree_map<int, std::string>>(100);
 }
 
-BENCHMARK(INT_STRING_100, 04_ARRAY, 100, 1000) {
+BENCHMARK(INT_STRING_100, 04_ARRAY, 10, 1000) {
   loop_number_string_array<int, std::string>(100);
 }
 
@@ -453,7 +453,7 @@ BENCHMARK(INT_STRING_1000, 03_ABSEIL_BTREE, 10, 1000) {
   loop_number_string<absl::btree_map<int, std::string>>(1000);
 }
 
-BENCHMARK(INT_STRING_1000, 04_ARRAY, 100, 1000) {
+BENCHMARK(INT_STRING_1000, 04_ARRAY, 10, 1000) {
   loop_number_string_array<int, std::string>(1000);
 }
 
@@ -473,7 +473,7 @@ BENCHMARK(INT_STRING_10000, 03_ABSEIL_BTREE, 10, 100) {
   loop_number_string<absl::btree_map<int, std::string>>(10000);
 }
 
-BENCHMARK(INT_STRING_10000, 04_ARRAY, 100, 1000) {
+BENCHMARK(INT_STRING_10000, 04_ARRAY, 10, 100) {
   loop_number_string_array<int, std::string>(10000);
 }
 
@@ -515,7 +515,7 @@ BENCHMARK(STRING_INT_100, 03_ABSEIL_BTREE, 10, 1000) {
   loop_string_number<absl::btree_map<std::string, int>>(100);
 }
 
-BENCHMARK(STRING_INT_100, 04_ARRAY, 100, 1000) {
+BENCHMARK(STRING_INT_100, 04_ARRAY, 10, 1000) {
   loop_string_number_array<std::string, int>(100);
 }
 
@@ -597,7 +597,7 @@ BENCHMARK(STRING_STRING_100, 03_ABSEIL_BTREE, 10, 10000) {
   loop_string_string<absl::btree_map<std::string, std::string>>(100);
 }
 
-BENCHMARK(STRING_STRING_100, 04_ARRAY, 100, 10000) {
+BENCHMARK(STRING_STRING_100, 04_ARRAY, 10, 10000) {
   loop_string_string_array<std::string, std::string>(100);
 }
 
@@ -617,7 +617,7 @@ BENCHMARK(STRING_STRING_1000, 03_ABSEIL_BTREE, 10, 10000) {
   loop_string_string<absl::btree_map<std::string, std::string>>(1000);
 }
 
-BENCHMARK(STRING_STRING_1000, 04_ARRAY, 100, 10000) {
+BENCHMARK(STRING_STRING_1000, 04_ARRAY, 10, 10000) {
   loop_string_string_array<std::string, std::string>(1000);
 }
 
