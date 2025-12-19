@@ -4,13 +4,18 @@
 #include <random>
 #include <functional>
 #include <ranges>
+#include <memory>
+#include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "absl/container/btree_map.h"
 #include "faker-cxx/faker.h"
 
 #include "celero/Celero.h"
+
+namespace {
 
 template<class>
 struct is_std_flat_map : std::false_type {};
@@ -311,333 +316,111 @@ void loop_string_string_array(int count) {
   }
 }
 
+/*===============================================================================*\
+ * 以下Celeroを使ったベンチマーク定義
+\*===============================================================================*/
+
+// CeleroのTestFixtureでcount(問題サイズ)を列挙し、ベンチ定義のコピペを減らす。
+// Context7(Celero README)にある getExperimentValues()/setUp()/BASELINE_F/BENCHMARK_F の流儀。
+class CountFixture : public celero::TestFixture {
+public:
+  std::vector<std::shared_ptr<celero::TestFixture::ExperimentValue>> getExperimentValues() const override {
+    // ここに値を足すだけでcountのバリエーションを増やせる
+    std::vector<std::shared_ptr<celero::TestFixture::ExperimentValue>> values;
+    // Celero v2.9系では、ExperimentValue::Iterations が 0 の場合
+    // 「テストケース側のデフォルトiterations」を使う。
+    // *_F マクロ側の iterations を 0 にすると、結果が 0 になり得て -nan になるため、ここで明示する。
+    values.emplace_back(makeExperimentValue(10, 1'000));
+    values.emplace_back(makeExperimentValue(100, 1'000));
+    values.emplace_back(makeExperimentValue(1'000, 1'000));
+    values.emplace_back(makeExperimentValue(10'000, 100));
+    return values;
+  }
+
+  void setUp(const celero::TestFixture::ExperimentValue* experimentValue) override {
+    this->count = static_cast<int>(experimentValue->Value);
+  }
+
+  int count = 0;
+
+private:
+  static std::shared_ptr<celero::TestFixture::ExperimentValue> makeExperimentValue(int64_t value, int64_t iterations) {
+    return std::make_shared<celero::TestFixture::ExperimentValue>(value, iterations);
+  }
+};
+
+} // namespace
+
 CELERO_MAIN
 
-// int -> int map benchmarks
+// samples/iterationsを0にしてCeleroに自動調整させる。
+// countはfixtureのExperimentValueで変化させる。
 
-BASELINE(INT_INT_10, Baseline, 100, 1000) {
-  loop_number_number_baseline(10);
+// int -> int
+BASELINE_F(INT_INT, Baseline, CountFixture, 30, 1) {
+  loop_number_number_baseline(this->count);
 }
-
-BENCHMARK(INT_INT_10, 01_STD_MAP, 100, 1000) {
-  loop_number_number<std::map<int, int>>(10);
-}
-
-BENCHMARK(INT_INT_10, 02_STD_FLAT_MAP, 100, 1000) {
-  loop_number_number<std::flat_map<int, int>>(10);
-}
-
-BENCHMARK(INT_INT_10, 03_ABSEIL_BTREE, 100, 1000) {
-  loop_number_number<absl::btree_map<int, int>>(10);
-}
-
-BENCHMARK(INT_INT_10, 04_ARRAY, 100, 1000) {
-  loop_number_number_array<int, int>(10);
-}
-
-BASELINE(INT_INT_100, Baseline, 100, 1000) {
-  loop_number_number_baseline(100);
-}
-
-BENCHMARK(INT_INT_100, 01_STD_MAP, 100, 1000) {
-  loop_number_number<std::map<int, int>>(100);
-}
-
-BENCHMARK(INT_INT_100, 02_STD_FLAT_MAP, 100, 1000) {
-  loop_number_number<std::flat_map<int, int>>(100);
-}
-
-BENCHMARK(INT_INT_100, 03_ABSEIL_BTREE, 100, 1000) {
-  loop_number_number<absl::btree_map<int, int>>(100);
-}
-
-BENCHMARK(INT_INT_100, 04_ARRAY, 100, 1000) {
-  loop_number_number_array<int, int>(100);
-}
-
-BASELINE(INT_INT_1000, Baseline, 10, 1000) {
-  loop_number_number_baseline(1000);
-}
-
-BENCHMARK(INT_INT_1000, 01_STD_MAP, 10, 1000) {
-  loop_number_number<std::map<int, int>>(1000);
-}
-
-BENCHMARK(INT_INT_1000, 02_STD_FLAT_MAP, 10, 1000) {
-  loop_number_number<std::flat_map<int, int>>(1000);
-}
-
-BENCHMARK(INT_INT_1000, 03_ABSEIL_BTREE, 10, 1000) {
-  loop_number_number<absl::btree_map<int, int>>(1000);
-}
-
-BENCHMARK(INT_INT_1000, 04_ARRAY, 10, 1000) {
-  loop_number_number_array<int, int>(1000);
-}
-
-BASELINE(INT_INT_10000, Baseline, 10, 100) {
-  loop_number_number_baseline(10000);
-}
-
-BENCHMARK(INT_INT_10000, 01_STD_MAP, 10, 100) {
-  loop_number_number<std::map<int, int>>(10000);
-}
-
-BENCHMARK(INT_INT_10000, 02_STD_FLAT_MAP, 10, 100) {
-  loop_number_number<std::flat_map<int, int>>(10000);
-}
-
-BENCHMARK(INT_INT_10000, 03_ABSEIL_BTREE, 10, 100) {
-  loop_number_number<absl::btree_map<int, int>>(10000);
-}
-
-BENCHMARK(INT_INT_10000, 04_ARRAY, 10, 100) {
-  loop_number_number_array<int, int>(10000);
-}
-
-// int -> string map benchmarks
-
-BASELINE(INT_STRING_10, Baseline, 100, 1000) {
-  loop_number_string_baseline(10);
-}
-
-BENCHMARK(INT_STRING_10, 01_STD_MAP, 100, 1000) {
-  loop_number_string<std::map<int, std::string>>(10);
-}
-
-BENCHMARK(INT_STRING_10, 02_STD_FLAT_MAP, 100, 1000) {
-  loop_number_string<std::flat_map<int, std::string>>(10);
-}
-
-BENCHMARK(INT_STRING_10, 03_ABSEIL_BTREE, 100, 1000) {
-  loop_number_string<absl::btree_map<int, std::string>>(10);
-}
-
-BENCHMARK(INT_STRING_10, 04_ARRAY, 100, 1000) {
-  loop_number_string_array<int, std::string>(10);
-}
-
-BASELINE(INT_STRING_100, Baseline, 10, 1000) {
-  loop_number_string_baseline(100);
-}
-
-BENCHMARK(INT_STRING_100, 01_STD_MAP, 10, 1000) {
-  loop_number_string<std::map<int, std::string>>(100);
-}
-
-BENCHMARK(INT_STRING_100, 02_STD_FLAT_MAP, 10, 1000) {
-  loop_number_string<std::flat_map<int, std::string>>(100);
-}
-
-BENCHMARK(INT_STRING_100, 03_ABSEIL_BTREE, 10, 1000) {
-  loop_number_string<absl::btree_map<int, std::string>>(100);
-}
-
-BENCHMARK(INT_STRING_100, 04_ARRAY, 10, 1000) {
-  loop_number_string_array<int, std::string>(100);
-}
-
-BASELINE(INT_STRING_1000, Baseline, 10, 1000) {
-  loop_number_string_baseline(1000);
-}
-
-BENCHMARK(INT_STRING_1000, 01_STD_MAP, 10, 1000) {
-  loop_number_string<std::map<int, std::string>>(1000);
-}
-
-BENCHMARK(INT_STRING_1000, 02_STD_FLAT_MAP, 10, 1000) {
-  loop_number_string<std::flat_map<int, std::string>>(1000);
-}
-
-BENCHMARK(INT_STRING_1000, 03_ABSEIL_BTREE, 10, 1000) {
-  loop_number_string<absl::btree_map<int, std::string>>(1000);
-}
-
-BENCHMARK(INT_STRING_1000, 04_ARRAY, 10, 1000) {
-  loop_number_string_array<int, std::string>(1000);
-}
-
-BASELINE(INT_STRING_10000, Baseline, 10, 1000) {
-  loop_number_string_baseline(10000);
-}
-
-BENCHMARK(INT_STRING_10000, 01_STD_MAP, 10, 100) {
-  loop_number_string<std::map<int, std::string>>(10000);
-}
-
-BENCHMARK(INT_STRING_10000, 02_STD_FLAT_MAP, 10, 100) {
-  loop_number_string<std::flat_map<int, std::string>>(10000);
-}
-
-BENCHMARK(INT_STRING_10000, 03_ABSEIL_BTREE, 10, 100) {
-  loop_number_string<absl::btree_map<int, std::string>>(10000);
-}
-
-BENCHMARK(INT_STRING_10000, 04_ARRAY, 10, 100) {
-  loop_number_string_array<int, std::string>(10000);
-}
-
-// string -> int map benchmarks
-
-BASELINE(STRING_INT_10, Baseline, 100, 1000) {
-  loop_string_number_baseline(10);
-}
-
-BENCHMARK(STRING_INT_10, 01_STD_MAP, 100, 1000) {
-  loop_string_number<std::map<std::string, int>>(10);
-}
-
-BENCHMARK(STRING_INT_10, 02_STD_FLAT_MAP, 100, 1000) {
-  loop_string_number<std::flat_map<std::string, int>>(10);
-}
-
-BENCHMARK(STRING_INT_10, 03_ABSEIL_BTREE, 100, 1000) {
-  loop_string_number<absl::btree_map<std::string, int>>(10);
-}
-
-BENCHMARK(STRING_INT_10, 04_ARRAY, 100, 1000) {
-  loop_string_number_array<std::string, int>(10);
-}
-
-BASELINE(STRING_INT_100, Baseline, 10, 1000) {
-  loop_string_number_baseline(100);
-}
-
-BENCHMARK(STRING_INT_100, 01_STD_MAP, 10, 1000) {
-  loop_string_number<std::map<std::string, int>>(100);
-}
-
-BENCHMARK(STRING_INT_100, 02_STD_FLAT_MAP, 10, 1000) {
-  loop_string_number<std::flat_map<std::string, int>>(100);
-}
-
-BENCHMARK(STRING_INT_100, 03_ABSEIL_BTREE, 10, 1000) {
-  loop_string_number<absl::btree_map<std::string, int>>(100);
-}
-
-BENCHMARK(STRING_INT_100, 04_ARRAY, 10, 1000) {
-  loop_string_number_array<std::string, int>(100);
-}
-
-BASELINE(STRING_INT_1000, Baseline, 10, 1000) {
-  loop_string_number_baseline(1000);
-}
-
-BENCHMARK(STRING_INT_1000, 01_STD_MAP, 10, 1000) {
-  loop_string_number<std::map<std::string, int>>(1000);
-}
-
-BENCHMARK(STRING_INT_1000, 02_STD_FLAT_MAP, 10, 1000) {
-  loop_string_number<std::flat_map<std::string, int>>(1000);
-}
-
-BENCHMARK(STRING_INT_1000, 03_ABSEIL_BTREE, 10, 1000) {
-  loop_string_number<absl::btree_map<std::string, int>>(1000);
-}
-
-BENCHMARK(STRING_INT_1000, 04_ARRAY, 10, 1000) {
-  loop_string_number_array<std::string, int>(1000);
-}
-
-BASELINE(STRING_INT_10000, Baseline, 10, 100) {
-  loop_string_number_baseline(10000);
-}
-
-BENCHMARK(STRING_INT_10000, 01_STD_MAP, 10, 100) {
-  loop_string_number<std::map<std::string, int>>(10000);
-}
-
-BENCHMARK(STRING_INT_10000, 02_STD_FLAT_MAP, 10, 100) {
-  loop_string_number<std::flat_map<std::string, int>>(10000);
-}
-
-BENCHMARK(STRING_INT_10000, 03_ABSEIL_BTREE, 10, 100) {
-  loop_string_number<absl::btree_map<std::string, int>>(10000);
-}
-
-BENCHMARK(STRING_INT_10000, 04_ARRAY, 10, 100) {
-  loop_string_number_array<std::string, int>(10000);
-}
-
-// string -> string map benchmarks
-
-BASELINE(STRING_STRING_10, Baseline, 100, 10000) {
-  loop_string_string_baseline(10);
-}
-
-BENCHMARK(STRING_STRING_10, 01_STD_MAP, 100, 10000) {
-  loop_string_string<std::map<std::string, std::string>>(10);
+BENCHMARK_F(INT_INT, 01_STD_MAP, CountFixture, 30, 1) {
+  loop_number_number<std::map<int, int>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_10, 02_STD_FLAT_MAP, 100, 10000) {
-  loop_string_string<std::flat_map<std::string, std::string>>(10);
+BENCHMARK_F(INT_INT, 02_STD_FLAT_MAP, CountFixture, 30, 1) {
+  loop_number_number<std::flat_map<int, int>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_10, 03_ABSEIL_BTREE, 100, 10000) {
-  loop_string_string<absl::btree_map<std::string, std::string>>(10);
+BENCHMARK_F(INT_INT, 03_ABSEIL_BTREE, CountFixture, 30, 1) {
+  loop_number_number<absl::btree_map<int, int>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_10, 04_ARRAY, 100, 10000) {
-  loop_string_string_array<std::string, std::string>(10);
+BENCHMARK_F(INT_INT, 04_ARRAY, CountFixture, 30, 1) {
+  loop_number_number_array<int, int>(this->count);
 }
 
-BASELINE(STRING_STRING_100, Baseline, 10, 10000) {
-  loop_string_string_baseline(100);
+// int -> string
+BASELINE_F(INT_STRING, Baseline, CountFixture, 30, 1) {
+  loop_number_string_baseline(this->count);
 }
-
-BENCHMARK(STRING_STRING_100, 01_STD_MAP, 10, 10000) {
-  loop_string_string<std::map<std::string, std::string>>(100);
+BENCHMARK_F(INT_STRING, 01_STD_MAP, CountFixture, 30, 1) {
+  loop_number_string<std::map<int, std::string>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_100, 02_STD_FLAT_MAP, 10, 10000) {
-  loop_string_string<std::flat_map<std::string, std::string>>(100);
+BENCHMARK_F(INT_STRING, 02_STD_FLAT_MAP, CountFixture, 30, 1) {
+  loop_number_string<std::flat_map<int, std::string>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_100, 03_ABSEIL_BTREE, 10, 10000) {
-  loop_string_string<absl::btree_map<std::string, std::string>>(100);
+BENCHMARK_F(INT_STRING, 03_ABSEIL_BTREE, CountFixture, 30, 1) {
+  loop_number_string<absl::btree_map<int, std::string>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_100, 04_ARRAY, 10, 10000) {
-  loop_string_string_array<std::string, std::string>(100);
+BENCHMARK_F(INT_STRING, 04_ARRAY, CountFixture, 30, 1) {
+  loop_number_string_array<int, std::string>(this->count);
 }
 
-BASELINE(STRING_STRING_1000, Baseline, 10, 10000) {
-  loop_string_string_baseline(1000);
+// string -> int
+BASELINE_F(STRING_INT, Baseline, CountFixture, 30, 1) {
+  loop_string_number_baseline(this->count);
 }
-
-BENCHMARK(STRING_STRING_1000, 01_STD_MAP, 10, 10000) {
-  loop_string_string<std::map<std::string, std::string>>(1000);
+BENCHMARK_F(STRING_INT, 01_STD_MAP, CountFixture, 30, 1) {
+  loop_string_number<std::map<std::string, int>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_1000, 02_STD_FLAT_MAP, 10, 10000) {
-  loop_string_string<std::flat_map<std::string, std::string>>(1000);
+BENCHMARK_F(STRING_INT, 02_STD_FLAT_MAP, CountFixture, 30, 1) {
+  loop_string_number<std::flat_map<std::string, int>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_1000, 03_ABSEIL_BTREE, 10, 10000) {
-  loop_string_string<absl::btree_map<std::string, std::string>>(1000);
+BENCHMARK_F(STRING_INT, 03_ABSEIL_BTREE, CountFixture, 30, 1) {
+  loop_string_number<absl::btree_map<std::string, int>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_1000, 04_ARRAY, 10, 10000) {
-  loop_string_string_array<std::string, std::string>(1000);
+BENCHMARK_F(STRING_INT, 04_ARRAY, CountFixture, 30, 1) {
+  loop_string_number_array<std::string, int>(this->count);
 }
 
-BASELINE(STRING_STRING_10000, Baseline, 10, 100) {
-  loop_string_string_baseline(10000);
+// string -> string
+BASELINE_F(STRING_STRING, Baseline, CountFixture, 30, 1) {
+  loop_string_string_baseline(this->count);
 }
-
-BENCHMARK(STRING_STRING_10000, 01_STD_MAP, 10, 100) {
-  loop_string_string<std::map<std::string, std::string>>(10000);
+BENCHMARK_F(STRING_STRING, 01_STD_MAP, CountFixture, 30, 1) {
+  loop_string_string<std::map<std::string, std::string>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_10000, 02_STD_FLAT_MAP, 10, 100) {
-  loop_string_string<std::flat_map<std::string, std::string>>(10000);
+BENCHMARK_F(STRING_STRING, 02_STD_FLAT_MAP, CountFixture, 30, 1) {
+  loop_string_string<std::flat_map<std::string, std::string>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_10000, 03_ABSEIL_BTREE, 10, 100) {
-  loop_string_string<absl::btree_map<std::string, std::string>>(10000);
+BENCHMARK_F(STRING_STRING, 03_ABSEIL_BTREE, CountFixture, 30, 1) {
+  loop_string_string<absl::btree_map<std::string, std::string>>(this->count);
 }
-
-BENCHMARK(STRING_STRING_10000, 04_ARRAY, 10, 100) {
-  loop_string_string_array<std::string, std::string>(10000);
+BENCHMARK_F(STRING_STRING, 04_ARRAY, CountFixture, 30, 1) {
+  loop_string_string_array<std::string, std::string>(this->count);
 }
 
