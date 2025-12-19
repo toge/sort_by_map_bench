@@ -51,10 +51,15 @@ void loop_number_number(int count) {
   }();
 
   T map;
+  // std::flat_mapについては事前に容量を確保しておく
   if constexpr (is_std_flat_map_v<T>) {
     auto [keys, values] = std::move(map).extract();
-    keys.reserve(count);
-    values.reserve(count);
+    if constexpr (requires { keys.reserve(count); }) {
+      keys.reserve(count);
+    }
+    if constexpr (requires { values.reserve(count); }) {
+      values.reserve(count);
+    }
     map.replace(std::move(keys), std::move(values));
   }
   for (int i = 0; i < count; ++i) {
@@ -122,6 +127,17 @@ void loop_number_string(int count) {
   }();
 
   T map;
+  // std::flat_mapについては事前に容量を確保しておく
+  if constexpr (is_std_flat_map_v<T>) {
+    auto [keys, values] = std::move(map).extract();
+    if constexpr (requires { keys.reserve(count); }) {
+      keys.reserve(count);
+    }
+    if constexpr (requires { values.reserve(count); }) {
+      values.reserve(count);
+    }
+    map.replace(std::move(keys), std::move(values));
+  }
   for (int i = 0; i < count; ++i) {
     auto const key = rand();
     auto const value = faker::color::name(faker::Locale::ja_JP);
@@ -188,6 +204,17 @@ void loop_string_number(int count) {
   }();
 
   T map;
+  // std::flat_mapについては事前に容量を確保しておく
+  if constexpr (is_std_flat_map_v<T>) {
+    auto [keys, values] = std::move(map).extract();
+    if constexpr (requires { keys.reserve(count); }) {
+      keys.reserve(count);
+    }
+    if constexpr (requires { values.reserve(count); }) {
+      values.reserve(count);
+    }
+    map.replace(std::move(keys), std::move(values));
+  }
   for (int i = 0; i < count; ++i) {
     auto const key = faker::color::name(faker::Locale::ja_JP);
     auto const value = rand();
@@ -239,6 +266,17 @@ void loop_string_string_baseline(int count) {
 template<typename T>
 void loop_string_string(int count) {
   T map;
+  // std::flat_mapについては事前に容量を確保しておく
+  if constexpr (is_std_flat_map_v<T>) {
+    auto [keys, values] = std::move(map).extract();
+    if constexpr (requires { keys.reserve(count); }) {
+      keys.reserve(count);
+    }
+    if constexpr (requires { values.reserve(count); }) {
+      values.reserve(count);
+    }
+    map.replace(std::move(keys), std::move(values));
+  }
   for (int i = 0; i < count; ++i) {
     auto const key = faker::color::name(faker::Locale::ja_JP);
     auto const value = faker::company::catchPhrase(faker::Locale::ja_JP);
