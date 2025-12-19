@@ -4,11 +4,24 @@
 #include <random>
 #include <functional>
 #include <ranges>
+#include <type_traits>
+#include <utility>
 
 #include "absl/container/btree_map.h"
 #include "faker-cxx/faker.h"
 
 #include "celero/Celero.h"
+
+template<class>
+struct is_std_flat_map : std::false_type {};
+
+template<class Key, class Mapped, class Compare, class KeyContainer, class MappedContainer>
+struct is_std_flat_map<std::flat_map<Key, Mapped, Compare, KeyContainer, MappedContainer>>
+  : std::true_type {};
+
+template<class T>
+inline constexpr bool is_std_flat_map_v =
+  is_std_flat_map<std::remove_cvref_t<T>>::value;
 
 // int -> int map benchmarks
 
@@ -38,6 +51,12 @@ void loop_number_number(int count) {
   }();
 
   T map;
+  if constexpr (is_std_flat_map_v<T>) {
+    auto [keys, values] = std::move(map).extract();
+    keys.reserve(count);
+    values.reserve(count);
+    map.replace(std::move(keys), std::move(values));
+  }
   for (int i = 0; i < count; ++i) {
     auto const key = rand();
     auto const value = rand();
