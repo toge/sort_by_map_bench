@@ -1,7 +1,8 @@
 {
   "dependencies": [
     "abseil",
+    "celero",
     "faker-cxx",
-    "celero"
+    "cpp-sort"
   ]
 }

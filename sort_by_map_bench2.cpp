@@ -1,8 +1,6 @@
-#include <iostream>
 #include <flat_map>
 #include <map>
 #include <random>
-#include <functional>
 #include <ranges>
 #include <memory>
 #include <string>
@@ -12,6 +10,7 @@
 
 #include "absl/container/btree_map.h"
 #include "faker-cxx/faker.h"
+#include "cpp-sort/sorters/pdq_sorter.h"
 
 #include "celero/Celero.h"
 
@@ -34,7 +33,10 @@ inline constexpr bool is_std_flat_map_v =
  * 以下Celeroを使ったベンチマーク定義
 \*===============================================================================*/
 
-// 共通テストデータを保持する構造体
+/**
+ * @brief 共通テストデータを生成・管理する構造体
+ *
+ */
 struct SharedTestData {
   std::vector<int> int_keys;
   std::vector<int> int_values;
@@ -48,29 +50,31 @@ struct SharedTestData {
       return;
     }
 
-    auto&& rand = []() noexcept {
-      auto device = std::random_device{};
-      auto engine = std::mt19937{device()};
-
-      return std::bind(std::uniform_int_distribution<>{0, 65536}, engine);
-    }();
+    auto const&& rand = []() noexcept {
+      auto engine = std::mt19937{std::random_device{}()};
+      return std::uniform_int_distribution<>{0, 65536}(engine);
+    };
 
     int_keys.resize(count);
     int_values.resize(count);
     string_keys.resize(count);
     string_values.resize(count);
 
-    for (int i = 0; i < count; ++i) {
-      int_keys[i] = rand();
-      int_values[i] = rand();
-      string_keys[i] = std::string{faker::color::name(faker::Locale::ja_JP)} + "#" + std::to_string(i);
-      string_values[i] = faker::company::catchPhrase(faker::Locale::ja_JP);
+    for (auto const idx : std::ranges::views::iota(0, count)) {
+      int_keys[idx] = rand();
+      int_values[idx] = rand();
+      string_keys[idx] = std::string{faker::color::name(faker::Locale::ja_JP)} + "#" + std::to_string(idx);
+      string_values[idx] = faker::company::catchPhrase(faker::Locale::ja_JP);
     }
 
     initialized = true;
   }
 };
 
+/**
+ * @brief 共通テストデータを共有するためのCeleroフィクスチャ
+ *
+ */
 class SharedDataFixture : public celero::TestFixture {
 public:
   std::vector<std::shared_ptr<celero::TestFixture::ExperimentValue>> getExperimentValues() const override {
@@ -109,7 +113,6 @@ void loop_number_number_baseline(SharedTestData const* bench_data) {
     celero::DoNotOptimizeAway(key);
     celero::DoNotOptimizeAway(value);
   }
-
 }
 
 template<typename T>
@@ -133,7 +136,7 @@ void loop_number_number(SharedTestData const* bench_data) {
   for (auto const idx : std::ranges::views::iota(0, static_cast<int>(COUNT))) {
     auto const key = bench_data->int_keys[idx];
     auto const value = bench_data->int_values[idx];
-    map.emplace(key, value);
+    map.try_emplace(key, value);
   }
 
   for (const auto& [_, value] : map) {
@@ -150,7 +153,28 @@ void loop_number_number_array(SharedTestData const* bench_data) {
 
   std::vector<std::size_t> indices(COUNT);
   std::ranges::iota(indices, std::size_t{});
+
   std::ranges::sort(indices, [&](auto const lhs, auto const rhs) {
+    return keys[lhs] < keys[rhs];
+  });
+
+  for (auto const index : indices) {
+    celero::DoNotOptimizeAway(values[index]);
+  }
+}
+
+template<typename T, typename U>
+void loop_number_number_array_cppsort(SharedTestData const* bench_data) {
+  auto const COUNT = bench_data->int_keys.size();
+
+  auto const& keys = bench_data->int_keys;
+  auto const& values = bench_data->int_values;
+
+  std::vector<std::size_t> indices(COUNT);
+  std::ranges::iota(indices, std::size_t{});
+
+  auto sorter = cppsort::pdq_sorter{};
+  sorter(indices, [&](auto const lhs, auto const rhs) {
     return keys[lhs] < keys[rhs];
   });
 
@@ -189,7 +213,7 @@ void loop_number_string(SharedTestData const* bench_data) {
   for (auto const idx : std::ranges::views::iota(0, static_cast<int>(COUNT))) {
     auto const key = bench_data->int_keys[idx];
     auto const value = &bench_data->string_values[idx];
-    map.emplace(key, value);
+    map.try_emplace(key, value);
   }
 
   for (const auto& [_, value] : map) {
@@ -207,6 +231,26 @@ void loop_number_string_array(SharedTestData const* bench_data) {
   std::vector<std::size_t> indices(COUNT);
   std::ranges::iota(indices, std::size_t{});
   std::ranges::sort(indices, [&](auto const lhs, auto const rhs) {
+    return keys[lhs] < keys[rhs];
+  });
+
+  for (auto const index : indices) {
+    celero::DoNotOptimizeAway(values[index].size());
+  }
+}
+
+template<typename T, typename U>
+void loop_number_string_array_cppsort(SharedTestData const* bench_data) {
+  auto const COUNT = bench_data->int_keys.size();
+
+  auto const& keys = bench_data->int_keys;
+  auto const& values = bench_data->string_values;
+
+  std::vector<std::size_t> indices(COUNT);
+  std::ranges::iota(indices, std::size_t{});
+
+  auto sorter = cppsort::pdq_sorter{};
+  sorter(indices, [&](auto const lhs, auto const rhs) {
     return keys[lhs] < keys[rhs];
   });
 
@@ -252,6 +296,7 @@ void loop_string_number(SharedTestData const* bench_data) {
     celero::DoNotOptimizeAway(value);
   }
 }
+
 template<typename T, typename U>
 void loop_string_number_array(SharedTestData const* bench_data) {
   auto const COUNT = bench_data->int_keys.size();
@@ -262,6 +307,26 @@ void loop_string_number_array(SharedTestData const* bench_data) {
   std::vector<std::size_t> indices(COUNT);
   std::ranges::iota(indices, std::size_t{});
   std::ranges::sort(indices, [&](auto const lhs, auto const rhs) {
+    return keys[lhs] < keys[rhs];
+  });
+
+  for (auto const index : indices) {
+    celero::DoNotOptimizeAway(values[index]);
+  }
+}
+
+template<typename T, typename U>
+void loop_string_number_array_cppsort(SharedTestData const* bench_data) {
+  auto const COUNT = bench_data->int_keys.size();
+
+  auto const& keys = bench_data->string_keys;
+  auto const& values = bench_data->int_values;
+
+  std::vector<std::size_t> indices(COUNT);
+  std::ranges::iota(indices, std::size_t{});
+
+  auto sorter = cppsort::pdq_sorter{};
+  sorter(indices, [&](auto const lhs, auto const rhs) {
     return keys[lhs] < keys[rhs];
   });
 
@@ -300,7 +365,7 @@ void loop_string_string(SharedTestData const* bench_data) {
   for (auto const idx : std::ranges::views::iota(0, static_cast<int>(COUNT))) {
     auto const& key = bench_data->string_keys[idx];
     auto const& value = bench_data->string_values[idx];
-    map.emplace(key, &value);
+    map.try_emplace(key, &value);
   }
 
   for (const auto& [_, value] : map) {
@@ -318,6 +383,26 @@ void loop_string_string_array(SharedTestData const* bench_data) {
   std::vector<std::size_t> indices(COUNT);
   std::ranges::iota(indices, std::size_t{});
   std::ranges::sort(indices, [&](auto const lhs, auto const rhs) {
+    return keys[lhs] < keys[rhs];
+  });
+
+  for (auto const index : indices) {
+    celero::DoNotOptimizeAway(values[index].size());
+  }
+}
+
+template<typename T, typename U>
+void loop_string_string_array_cppsort(SharedTestData const* bench_data) {
+  auto const COUNT = bench_data->int_keys.size();
+
+  auto const& keys = bench_data->string_keys;
+  auto const& values = bench_data->string_values;
+
+  std::vector<std::size_t> indices(COUNT);
+  std::ranges::iota(indices, std::size_t{});
+
+  auto sorter = cppsort::pdq_sorter{};
+  sorter(indices, [&](auto const lhs, auto const rhs) {
     return keys[lhs] < keys[rhs];
   });
 
@@ -349,6 +434,9 @@ BENCHMARK_F(INT_INT, 03_ABSEIL_BTREE, SharedDataFixture, 30, 1) {
 BENCHMARK_F(INT_INT, 04_ARRAY, SharedDataFixture, 30, 1) {
   loop_number_number_array<int, int>(this->shared_data);
 }
+BENCHMARK_F(INT_INT, 05_ARRAY_CPPSORT, SharedDataFixture, 30, 1) {
+  loop_number_number_array_cppsort<int, int>(this->shared_data);
+}
 
 // int -> string
 BASELINE_F(INT_STRING, Baseline, SharedDataFixture, 30, 1) {
@@ -365,6 +453,9 @@ BENCHMARK_F(INT_STRING, 03_ABSEIL_BTREE, SharedDataFixture, 30, 1) {
 }
 BENCHMARK_F(INT_STRING, 04_ARRAY, SharedDataFixture, 30, 1) {
   loop_number_string_array<int, std::string const*>(this->shared_data);
+}
+BENCHMARK_F(INT_STRING, 05_ARRAY_CPPSORT, SharedDataFixture, 30, 1) {
+  loop_number_string_array_cppsort<int, std::string const*>(this->shared_data);
 }
 
 // string -> int
@@ -383,6 +474,9 @@ BENCHMARK_F(STRING_INT, 03_ABSEIL_BTREE, SharedDataFixture, 30, 1) {
 BENCHMARK_F(STRING_INT, 04_ARRAY, SharedDataFixture, 30, 1) {
   loop_string_number_array<std::string, int>(this->shared_data);
 }
+BENCHMARK_F(STRING_INT, 05_ARRAY_CPPSORT, SharedDataFixture, 30, 1) {
+  loop_string_number_array_cppsort<std::string, int>(this->shared_data);
+}
 
 // string -> string
 BASELINE_F(STRING_STRING, Baseline, SharedDataFixture, 30, 1) {
@@ -399,4 +493,7 @@ BENCHMARK_F(STRING_STRING, 03_ABSEIL_BTREE, SharedDataFixture, 30, 1) {
 }
 BENCHMARK_F(STRING_STRING, 04_ARRAY, SharedDataFixture, 30, 1) {
   loop_string_string_array<std::string, std::string const*>(this->shared_data);
+}
+BENCHMARK_F(STRING_STRING, 05_ARRAY_CPPSORT, SharedDataFixture, 30, 1) {
+  loop_string_string_array_cppsort<std::string, std::string const*>(this->shared_data);
 }
